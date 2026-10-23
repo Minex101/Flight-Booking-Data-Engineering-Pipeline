@@ -1,0 +1,71 @@
+resources:
+  jobs:
+    Databricks_ETE_Pipeline:
+      name: Databricks ETE Pipeline
+      tasks:
+        - task_key: Parameters
+          notebook_task:
+            notebook_path: /Workspace/Databricks ETE/Parameters
+            source: WORKSPACE
+        - task_key: Bronze_Autoloader
+          depends_on:
+            - task_key: Parameters
+          for_each_task:
+            inputs: "{{tasks.Parameters.values.output_key}}"
+            task:
+              task_key: Bronze_Autoloader_iteration
+              notebook_task:
+                notebook_path: /Workspace/Databricks ETE/Bronze
+                base_parameters:
+                  src_folder: "{{input.src}}"
+                source: WORKSPACE
+        - task_key: Silver_Transformations
+          depends_on:
+            - task_key: Bronze_Autoloader
+          pipeline_task:
+            pipeline_id: 5657b48b-bc86-432a-90ca-45e3bc4efdcc
+            full_refresh: false
+        - task_key: Gold_Dimension_Tables
+          depends_on:
+            - task_key: Silver_Transformations
+          for_each_task:
+            inputs: "[{\"keycols\": \"['passenger_id']\", \"cdccols\": \"modifiedDate\",
+              \"backdated_refresh\": \"\", \"surrogate_key_col\":
+              \"DimPassengersKey\", \"source_object\": \"silver_passengers\",
+              \"catalog_name\": \"databricksete\", \"source_schema\":
+              \"silver\", \"target_object\": \"DimPassengers\",
+              \"target_schema\": \"gold\" }, { \"keycols\": \"['flight_id']\",
+              \"cdccols\": \"modifiedDate\", \"backdated_refresh\": \"\",
+              \"surrogate_key_col\": \"DimFlightsKey\", \"source_object\":
+              \"silver_flights\", \"catalog_name\": \"databricksete\",
+              \"source_schema\": \"silver\", \"target_object\": \"DimFlights\",
+              \"target_schema\": \"gold\"}, {\"keycols\": \"['airport_id']\",
+              \"cdccols\": \"modifiedDate\", \"backdated_refresh\": \"\",
+              \"surrogate_key_col\": \"DimAirportsKey\", \"source_object\":
+              \"silver_airports\", \"catalog_name\": \"databricksete\",
+              \"source_schema\": \"silver\", \"target_object\": \"DimAirports\",
+              \"target_schema\": \"gold\"}]"
+            task:
+              task_key: Gold_Dimension_Tables_iteration
+              notebook_task:
+                notebook_path: /Workspace/Databricks ETE/GOLD_Dims
+                base_parameters:
+                  keycols: "{{input.keycols}}"
+                  cdccols: "{{input.cdccols}}"
+                  backdated_refresh: "\t{{input.backdated_refresh}}"
+                  surrogate_key_col: "\t{{input.surrogate_key_col}}"
+                  source_object: "{{input.source_object}}"
+                  catalog_name: "{{input.catalog_name}}"
+                  source_schema: "{{input.source_schema}}"
+                  target_object: "{{input.target_object}}"
+                  target_schema: "\t{{input.target_schema}}"
+                source: WORKSPACE
+        - task_key: Gold_Fact_Tables
+          depends_on:
+            - task_key: Gold_Dimension_Tables
+          notebook_task:
+            notebook_path: /Workspace/Databricks ETE/GOLD_Fact
+            source: WORKSPACE
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
