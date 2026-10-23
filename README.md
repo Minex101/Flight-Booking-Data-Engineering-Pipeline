@@ -31,7 +31,7 @@ The whole medallion chain runs as **one Databricks Job** on **Serverless** compu
 
 <img width="1352" height="164" alt="image" src="https://github.com/user-attachments/assets/5c69b72a-d05a-4cf1-8e19-24cdefdf04b7" />
 
-
+The job runs five tasks in sequence, as shown in the pipeline above:
 
 | Step | Task | What it does |
 | ---- | ---- | ------------ |
